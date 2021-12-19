@@ -7,12 +7,13 @@
 //                                                 Variabili e costanti
 //--------------------------------------------------------------------------------------------------------------------
 #define startbtn 8      //pin start
-#define stoprsbtn 7       //pin reset e stop cronometro
+#define strsbtn 7       //pin reset e stop cronometro
 int lapCR = LOW;        //variabile che indica lo stato delle fotocellule (aperte o chiuse)
 int stato = 0;          //stato del cronometro
 int passaggi = 0;       //numero di passaggi
 long start = 0;         //tempo di partenza
 long tempo_lap  = 0;    //tempo al giro
+int Dt1,Dt;             //variabili per calcolare il tempo di oscuramento della fotocellula
 #define lux 1000        //il valore deve essere cambiato in base alle condizioni ambientali 
                         //per la calibrazione decommentare Serial.println(val); vedere il valore a fotocellula aperta 
                         //e chiusa e poi variare il valore al piu basso possibile, cosigliati numerosi test 
@@ -22,7 +23,7 @@ long tempo_lap  = 0;    //tempo al giro
 void setup() {
   Serial.begin(9600);     //inizializza la comunicazione seriale nel canale 19200
   pinMode(startbtn, INPUT);  // Setta il pin digitale 8 per stop e reset in ingresso
-  pinMode(stoprsbtn, INPUT);   // Setta il pin digitale 7 per partenza in ingresso
+  pinMode(strsbtn, INPUT);   // Setta il pin digitale 7 per partenza in ingresso
   pinMode(13,OUTPUT);        // Setta il pin digitale 13 per visualizzazione stop in uscita
 }
 //--------------------------------------------------------------------------------------------------------------------  
@@ -41,15 +42,16 @@ void partenza(){
 //--------------------------------------------------------------------------------------------------------------------
 void lap(){
   while (stato == 1) {
-  fotocellule();
-  if (lapCR == HIGH && stato == 1){ 
+  if (digitalRead(startbtn) == HIGH && stato == 1){ 
    tempo_lap = millis() - start;
+   Dt1= millis();
    passaggi++;
    output(); // visutalizza output
-   delay(1000);
+   fotocellule();   //esecuzione funzione fotocellule
    while (lapCR == HIGH){ fotocellule();}//esecuzione funzione fotocellule
+   Dt= millis()-Dt1; 
+   if (Dt<3)delay(3-Dt);//ritardo necessario affinchè le fotocellule non mandino un numero eccessivo di dati
  }
- tempo_lap = millis() - start;
  fermare();
  }}
 //--------------------------------------------------------------------------------------------------------------------  
@@ -65,25 +67,20 @@ void fotocellule(){
 //                                 Funzione per la comunicazione dell'output
 //--------------------------------------------------------------------------------------------------------------------
 void output(){
-   Serial.print("SL ");            //comunicazione tempo
+   Serial.print("tempo ");            //comunicazione tempo
    Serial.print(passaggi);
-   Serial.print("   ");
+   Serial.print(": ");
    Serial.print(tempo_lap/1000);
    Serial.print(".");
-   Serial.println(tempo_lap%100);
+   Serial.print(tempo_lap%100);
+   Serial.println("s");
 }
 //--------------------------------------------------------------------------------------------------------------------  
 //                    Funzione che ferma la lettura delle fotocellule e che attiva il reset del cronometro
 //--------------------------------------------------------------------------------------------------------------------
  void fermare(){
- if (digitalRead(stoprsbtn) == HIGH && stato == 1){ stato = 0;   //stop e reset del programma
-   Serial.print("SP ");            //comunicazione tempo fine
-   Serial.print(passaggi);
-   Serial.print("   ");
-   Serial.print(tempo_lap/1000);
-   Serial.print(".");
-   Serial.println(tempo_lap%100);
- }}
+ if (digitalRead(strsbtn) == HIGH && stato == 1) stato = 0;   //stop e reset del programma
+ }
 //--------------------------------------------------------------------------------------------------------------------  
 //                                    Funzione per il reset del cronometro
 //--------------------------------------------------------------------------------------------------------------------
